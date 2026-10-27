@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+# data and model artifacts live in Google Drive / GCS, not git
+data/
+runs/
+models/*.task
+*.keras
+*.tflite
+!configs/*.json

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "_comment": "Single source of truth for exercises, form-error classes and rep-counting thresholds. Copy this file to formcoach-app/mobile/assets/config/labels.json whenever it changes. Class names are '<exercise>__<error>'.",
+  "exercises": {
+    "squat": {
+      "display": "Bodyweight Squat",
+      "errors": ["correct", "knee_valgus", "forward_lean", "insufficient_depth", "heel_lift"],
+      "rep": {"angle": "knee", "combine": "mean", "top": 160, "bottom_enter": 145, "min_rep_seconds": 0.6},
+      "required_landmarks": [11, 12, 23, 24, 25, 26, 27, 28],
+      "camera_hint": "Phone at hip height, 2-3 m away, whole body in frame, turned about 45 degrees from facing you."
+    },
+    "lunge": {
+      "display": "Lunge",
+      "errors": ["correct", "knee_alignment", "forward_lean", "insufficient_depth"],
+      "rep": {"angle": "knee", "combine": "min", "top": 155, "bottom_enter": 135, "min_rep_seconds": 0.6},
+      "required_landmarks": [11, 12, 23, 24, 25, 26, 27, 28],
+      "camera_hint": "Phone at hip height, 2-3 m away, side-on so your front leg is clearly visible."
+    },
+    "chest_press": {
+      "display": "Chest Press (dumbbell/floor)",
+      "errors": ["correct", "elbow_flare", "uneven_arms", "partial_rom"],
+      "rep": {"angle": "elbow", "combine": "mean", "top": 150, "bottom_enter": 120, "min_rep_seconds": 0.5},
+      "required_landmarks": [11, 12, 13, 14, 15, 16],
+      "camera_hint": "Phone about 1.5 m away at bench height, upper body and both arms in frame."
+    }
+  },
+  "thresholds": {
+    "landmark_visibility": 0.5,
+    "gate_seconds": 1.0,
+    "error_min_prob": 0.5,
+    "speak_cooldown_seconds": 4.0
+  }
+}

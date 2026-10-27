@@ -1,0 +1,10 @@
+# Model development (Colab already has TF/Keras; install the rest)
+tensorflow>=2.16        # Keras 3; Model A training + TFLite export
+mediapipe>=0.10.14      # Model C offline twin (BlazePose) for data extraction
+opencv-python-headless>=4.8
+numpy>=1.26
+pandas>=2.0
+scikit-learn>=1.3
+matplotlib>=3.7
+google-genai>=1.20      # Gemini tuning + evaluation on Vertex AI
+pytest>=7
