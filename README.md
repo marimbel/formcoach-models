@@ -38,6 +38,18 @@ raw videos ──01──▶ landmarks + reps.csv + crops/ ──02──▶ par
                  10 data report (counts for the documentation)
 ```
 
+## Pilot run before your own recordings
+
+You can train Model A on the public squat data alone to test the pipeline (see the "Pilot run" cells in
+`notebooks/colab_model_a.ipynb`): import Zenodo/Mendeley, run `01b` (and `01` if `raw/` has clips), run
+`02_make_splits.py` with no `--pin`, train with `03`, and evaluate with `--eval-split val`:
+
+    python scripts/04_eval_model_a.py --data data/processed --runs runs/probe runs/finetune --eval-split val
+    python scripts/04b_feature_baseline.py --data data/processed --eval-split val
+
+These are validation numbers on squats only, never the final results. Once your recordings exist, re-run from `01`
+(it rewrites `reps.csv`), split with pinned test participants, and evaluate on `test`.
+
 ## Setup
 
 ```bash

@@ -29,6 +29,7 @@ from formcoach.labels import exercises  # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", type=Path, required=True)
+    ap.add_argument("--eval-split", choices=["test", "val"], default="test", help="val = pilot only")
     args = ap.parse_args()
     reps = pd.read_csv(args.data / "reps.csv")
     out = {}
@@ -39,14 +40,14 @@ def main():
         feats = pd.DataFrame([json.loads(f) for f in sub.features]).drop(columns=["view"], errors="ignore")
         X = feats.apply(pd.to_numeric, errors="coerce").to_numpy(float)
         y = sub.error.to_numpy()
-        tr, te = (sub.split == "train").to_numpy(), (sub.split == "test").to_numpy()
+        tr, te = (sub.split == "train").to_numpy(), (sub.split == args.eval_split).to_numpy()
         if not tr.any() or not te.any():
             continue
         clf = make_pipeline(SimpleImputer(), StandardScaler(), LogisticRegression(max_iter=2000, class_weight="balanced"))
         clf.fit(X[tr], y[tr])
         yp = clf.predict(X[te])
         out[ex] = {"accuracy": accuracy_score(y[te], yp), "macro_f1": f1_score(y[te], yp, average="macro"),
-                   "n_test": int(te.sum())}
+                   "n_eval": int(te.sum()), "eval_split": args.eval_split}
         print(f"== {ex} ==\n" + classification_report(y[te], yp, zero_division=0))
     (args.data / "feature_baseline.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))

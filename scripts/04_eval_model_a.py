@@ -123,18 +123,21 @@ def gallery(rows: pd.DataFrame, crops: pd.DataFrame, root: Path, path: Path, n=1
     cv2.imwrite(str(path), grid)
 
 
-def evaluate(run: Path, crops: pd.DataFrame, root: Path) -> dict:
+def evaluate(run: Path, crops: pd.DataFrame, root: Path, split: str = "test") -> dict:
     import keras
     from sklearn.metrics import accuracy_score, classification_report, f1_score, precision_recall_fscore_support
     model = keras.models.load_model(run / "model.keras")
-    test = crops[crops.split == "test"].reset_index(drop=True)
+    test = crops[crops.split == split].reset_index(drop=True)
+    if test.empty:
+        sys.exit(f"no crops in the '{split}' split. Before your own recordings exist there is no test set: "
+                 "run a pilot with --eval-split val.")
     probs = masked(predict(model, test, root), list(test.exercise))
     crop_pred = [class_names()[i] for i in probs.argmax(1)]
     reps = rep_level(test, probs)
-    reps.to_csv(run / "pred_test.csv", index=False)
+    reps.to_csv(run / f"pred_{split}.csv", index=False)
     y, yp = reps.class_name, reps.pred_class
     p, r, f, _ = precision_recall_fscore_support(y, yp, average="macro", zero_division=0)
-    m = {"run": run.name, "n_test_reps": len(reps), "n_test_crops": len(test),
+    m = {"run": run.name, "eval_split": split, "n_test_reps": len(reps), "n_test_crops": len(test),
          "rep_accuracy": accuracy_score(y, yp), "rep_macro_precision": p, "rep_macro_recall": r, "rep_macro_f1": f,
          "crop_accuracy": accuracy_score(test.class_name, crop_pred),
          "per_exercise_accuracy": {ex: accuracy_score(g.class_name, g.pred_class) for ex, g in reps.groupby("exercise")},
@@ -156,15 +159,19 @@ def main():
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--runs", type=Path, nargs="+", required=True)
     ap.add_argument("--export-preds", type=Path, help="run dir whose model predicts every split for Gemini data")
+    ap.add_argument("--eval-split", choices=["test", "val"], default="test",
+                    help="val = PILOT only (public data, before own recordings); final numbers always use test")
     args = ap.parse_args()
     crops = pd.read_csv(args.data / "crops.csv")
-    results = [evaluate(r, crops, args.data) for r in args.runs]
+    results = [evaluate(r, crops, args.data, args.eval_split) for r in args.runs]
     lines = ["| run | rep acc | macro P | macro R | macro F1 | error-vs-correct F1 | crop acc |", "|---|---|---|---|---|---|---|"]
     for m in results:
         lines.append(f"| {m['run']} | {m['rep_accuracy']:.3f} | {m['rep_macro_precision']:.3f} | {m['rep_macro_recall']:.3f} | "
                      f"{m['rep_macro_f1']:.3f} | {m['binary_error_vs_correct_f1']:.3f} | {m['crop_accuracy']:.3f} |")
     table = "\n".join(lines)
-    (args.runs[0].parent / "results_model_a.md").write_text("# Model A test results (unseen participants)\n\n" + table + "\n")
+    title = ("# Model A test results (unseen participants)" if args.eval_split == "test" else
+             "# Model A PILOT results on the validation split (public data only; NOT the final test numbers)")
+    (args.runs[0].parent / "results_model_a.md").write_text(title + "\n\n" + table + "\n")
     print(table)
 
     if args.export_preds:
