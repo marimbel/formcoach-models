@@ -6,13 +6,26 @@ and evaluation. The mobile app and the Cloud Run backend are in **formcoach-app*
 | Model | What | Where it runs | Customization | Code here |
 |---|---|---|---|---|
 | A | MobileNetV3-Large form-error classifier on bottom-of-rep body crops | on device (TFLite) | fine-tuned (vs. frozen-backbone baseline) | `03`–`05` |
-| B | Gemini coach: evidence → structured coaching JSON | Vertex AI (via backend) | supervised fine-tuning (vs. base Gemini) | `06`–`09` |
+| B | Gemini 3.5 Flash coach: evidence → structured coaching JSON | Vertex AI (via backend) | supervised fine-tuning (vs. base Gemini 3.5 Flash) | `06`–`09` |
 | C | BlazePose landmarks (ML Kit on device; MediaPipe here for data prep) | on device | pretrained | `01` |
-| D | Gemini image model, correct-form illustration | Vertex AI (via backend) | pretrained | in app repo |
+| D | Gemini 3.1 Flash Image, correct-form illustration | Vertex AI (via backend) | pretrained | in app repo |
+
+## Data sources
+
+| Source | What | License | Used for |
+|---|---|---|---|
+| **Our recordings** (`p01`, `p02`, …) | squat, lunge, chest press; all 13 classes; 2 views | ours (consent notes) | train, val, **test (only source)** |
+| Zenodo 17558630 squat images (`zsq`) | side-view squats: Good / Bad Back / Bad Heel | CC BY 4.0 | train, val |
+| Mendeley kgbb3yn47p v2 videos (`mdl`) | bodyweight squats, good/bad form, 3 views, 26 subjects; bad clips hand-labelled by us | CC BY 4.0 | train, val |
+
+`02_make_splits.py` keeps every public-data participant out of the test set. `10_data_report.py` writes the
+counts per split / class / source for the report. Step-by-step: `notebooks/colab_model_a.ipynb` (GPU) and
+`notebooks/colab_gemini.ipynb`.
 
 ## Pipeline
 
 ```
+public downloads ──00──▶ raw videos / image manifest
 raw videos ──01──▶ landmarks + reps.csv + crops/ ──02──▶ participant splits
                                             │
                        ┌────────────────────┴───────────────────┐
@@ -22,13 +35,14 @@ raw videos ──01──▶ landmarks + reps.csv + crops/ ──02──▶ par
                        │ preds_all.csv
                  06 build Gemini situations (+ drafts) ──▶ human review ──07──▶ JSONL
                  08 tune Gemini on Vertex AI ──▶ 09 base vs tuned eval
+                 10 data report (counts for the documentation)
 ```
 
 ## Setup
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q tests              # 27 unit tests: geometry, reps, splits, prompt contract
+python -m pytest -q tests              # unit tests: geometry, reps, splits, prompt contract
 ```
 Training needs a GPU: use `notebooks/colab_model_a.ipynb`. Gemini steps need a GCP project with Vertex AI
 enabled and `gcloud auth application-default login`.

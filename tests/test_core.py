@@ -206,3 +206,20 @@ def test_number_grounding():
 def test_score_handles_bad_json():
     out = score({"action": "coach"}, None, ["not_json"], {})
     assert out["json_valid"] is False and out["action_match"] is False
+
+
+def test_public_data_never_in_test():
+    from formcoach.splits import split_with_public
+    counts = {f"p{i:02d}": 40 for i in range(8)}
+    counts.update({f"mdl{i}": 30 for i in range(12)})
+    counts.update({f"zsq{i:02d}": 25 for i in range(10)})
+    sp = split_with_public(counts, pinned={"p07": "test"})
+    assert set(sp) == set(counts)
+    assert all(sp[p] in ("train", "val") for p in counts if p.startswith(("mdl", "zsq")))
+    assert {"train", "val", "test"} <= {sp[p] for p in counts if p.startswith("p")}
+    assert sp["p07"] == "test"
+    pub = [p for p in counts if not p.startswith("p")]
+    val_share = sum(counts[p] for p in pub if sp[p] == "val") / sum(counts[p] for p in pub)
+    assert 0.05 < val_share < 0.3
+    with pytest.raises(ValueError):
+        split_with_public(counts, pinned={"mdl1": "test"})

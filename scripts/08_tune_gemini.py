@@ -21,10 +21,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True)
     ap.add_argument("--location", default="us-central1")
-    ap.add_argument("--base-model", default="gemini-2.5-flash")
+    ap.add_argument("--base-model", default="gemini-3.5-flash",
+                    help="Gemini 2.5 models were shut down on Vertex AI on Oct 20, 2026")
     ap.add_argument("--train", required=True)
     ap.add_argument("--val")
-    ap.add_argument("--epochs", type=int, default=4)
+    ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--lr-multiplier", type=float, default=1.0)
     ap.add_argument("--adapter-size", type=int, choices=[1, 2, 4, 8, 16], default=4)
     ap.add_argument("--name", default="formcoach-coach-v1")

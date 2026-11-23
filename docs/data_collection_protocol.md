@@ -6,9 +6,15 @@ may be uploaded to the group's private Google Cloud bucket and sent to Gemini, a
 publish identifiable footage in the report or video without explicit permission.
 
 ## Who
-Aim for **10+ participants** (the 4 group members plus friends). Recruit at least 2 non-members and pin them to
-the test split, so the "unseen user" test is real. Record variety: body types, heights, clothing (baggy vs.
-fitted), skin tones, hair covering the shoulders, etc.
+Aim for **8–10 participants**: the 3 group members plus friends and family. Public datasets add more squat
+examples for training, but **lunges and chest presses come only from us**, and so does the whole test set.
+Recruit at least 2 non-members and pin them to the test split (`02_make_splits.py --pin p09=test`), so the
+"unseen user" test is real. Record variety: body types, heights, clothing (baggy vs. fitted), skin tones,
+hair covering the shoulders, etc.
+
+### How much to record
+Per participant: 13 classes × 1 clip × 6 reps ≈ 80 reps, about 30–40 minutes with rests. Add a second camera
+angle for the squat classes if there is time. 8 participants ≈ 600+ reps (1,800+ crops) of our own data.
 
 ## What to record (per participant)
 For each exercise, one clip per class, **5–8 reps per clip**, plus a second take from a different angle:
