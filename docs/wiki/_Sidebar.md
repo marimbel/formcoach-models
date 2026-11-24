@@ -1,6 +1,7 @@
 **FormCoach models**
 
 - [[Home]]
+- [[Training Guide]]
 - [[Models]]
 - [[Data Sources]]
 - [[Model A Data Card]]
