@@ -12,6 +12,7 @@ Each frame goes through C on the phone. A finished rep goes through A, and only 
 
 | Page | What's in it |
 | --- | --- |
+| [[Training Guide]] | Step by step: get data, train Models A and B, put them into the app |
 | [[Models]] | Which model fills each course slot, its input and output, where it runs, its baseline |
 | [[Data Sources]] | Own recordings and the public datasets, with licenses |
 | [[Model A Data Card]] | Train/val/test, collection, counts, format, labels, preprocessing, split, limitations, biases |
