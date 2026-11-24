@@ -10,6 +10,12 @@ and evaluation. The mobile app and the Cloud Run backend are in **formcoach-app*
 | C | BlazePose landmarks (ML Kit on device; MediaPipe here for data prep) | on device | pretrained | `01` |
 | D | Gemini 3.1 Flash Image, correct-form illustration | Vertex AI (via backend) | pretrained | in app repo |
 
+## Documentation
+
+The full models and data documentation (model choices, data sources, data cards, test-set separation, workflow)
+is in [`docs/wiki/`](docs/wiki/Home.md) and on the [project wiki](https://github.com/marimbel/formcoach-models/wiki).
+To update the wiki after editing `docs/wiki/`, run `bash scripts/publish_wiki.sh` from your own computer.
+
 ## Data sources
 
 | Source | What | License | Used for |
