@@ -127,14 +127,26 @@ def frame_features(lm: np.ndarray, exercise: str) -> dict:
         facing = np.sign(lm[foot, 0] - lm[heel, 0]) or 1.0
         f["knee_past_toe"] = float((lm[knee, 0] - lm[foot, 0]) * facing / shank) if shank > 1e-6 else float("nan")
 
-    if exercise == "chest_press":
+    if exercise == "push_up":
         el, er = elbow_angles(lm)
         f["elbow_angle_left"], f["elbow_angle_right"] = el, er
-        f["elbow_asymmetry_deg"] = abs(el - er)
+        # upper arm vs torso: about 45 deg is a tucked push-up, about 90 deg is fully flared (best seen front/oblique)
         f["shoulder_abduction_left"] = angle(_p(lm, L_HIP), _p(lm, L_SHOULDER), _p(lm, L_ELBOW))
         f["shoulder_abduction_right"] = angle(_p(lm, R_HIP), _p(lm, R_SHOULDER), _p(lm, R_ELBOW))
-        sw = _dist(_p(lm, L_SHOULDER), _p(lm, R_SHOULDER))
-        f["wrist_height_diff"] = float(abs(lm[L_WRIST, 1] - lm[R_WRIST, 1]) / sw) if sw > 1e-6 else float("nan")
+        mid_a = (_p(lm, L_ANKLE) + _p(lm, R_ANKLE)) / 2
+        # straight body = 180; sagging or piked hips bend it
+        f["body_line_angle"] = angle(mid_s, mid_h, mid_a)
+        # signed distance of the hips from the shoulder-ankle line, in body lengths, measured along the line's normal
+        # that points down the image (toward the floor): >0 hips sag, <0 hips piked up. Stable at any body angle.
+        d = mid_a - mid_s
+        body = float(np.linalg.norm(d))
+        if body > 1e-6:
+            n = np.array([-d[1], d[0]]) / body
+            if n[1] < 0 or (n[1] == 0 and n[0] < 0):
+                n = -n
+            f["hip_sag"] = float(np.dot(mid_h - mid_s, n) / body)
+        else:
+            f["hip_sag"] = float("nan")
     # NaN -> None so the JSON is valid and identical to what the app sends (null)
     return {k: ((None if math.isnan(v) else round(float(v), 3)) if isinstance(v, (float, np.floating)) else v)
             for k, v in f.items()}

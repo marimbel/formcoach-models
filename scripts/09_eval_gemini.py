@@ -3,7 +3,7 @@
 
     python scripts/09_eval_gemini.py --project YOUR_PROJECT --location us-central1 \
         --test data/gemini/test_eval.jsonl --data data/processed \
-        --base gemini-2.5-flash --tuned projects/.../endpoints/...   --out runs/gemini/eval
+        --base gemini-3.5-flash --tuned projects/.../endpoints/...   --out runs/gemini/eval
 
 Both models get the identical system instruction, evidence and image, in the same order as the
 training examples. Automatic metrics (vs. the human-reviewed reference): valid JSON, schema
@@ -26,7 +26,7 @@ from formcoach.gemini_eval import score, summarize  # noqa: E402
 from formcoach.prompting import SYSTEM_INSTRUCTION, parse_response, render_user_prompt  # noqa: E402
 
 
-def call(client, types, model: str, situation: dict, image: bytes | None, json_mode: bool, thinking_budget: int | None):
+def call(client, types, model: str, situation: dict, image: bytes | None, json_mode: bool, thinking_level: str | None):
     parts = []
     if image:
         parts.append(types.Part.from_bytes(data=image, mime_type="image/jpeg"))
@@ -34,8 +34,8 @@ def call(client, types, model: str, situation: dict, image: bytes | None, json_m
     cfg = dict(system_instruction=SYSTEM_INSTRUCTION, temperature=0.2, max_output_tokens=512)
     if json_mode:
         cfg["response_mime_type"] = "application/json"
-    if thinking_budget is not None:
-        cfg["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_budget)
+    if thinking_level:
+        cfg["thinking_config"] = types.ThinkingConfig(thinking_level=thinking_level)
     for attempt in range(4):
         try:
             t0 = time.perf_counter()
@@ -43,6 +43,9 @@ def call(client, types, model: str, situation: dict, image: bytes | None, json_m
                                                   config=types.GenerateContentConfig(**cfg))
             return resp.text or "", (time.perf_counter() - t0) * 1000
         except Exception as e:  # rate limits etc.
+            if "thinking" in str(e).lower() and "thinking_config" in cfg:
+                cfg.pop("thinking_config")  # e.g. a tuned endpoint that rejects the setting; retry without it
+                continue
             wait = 2 ** attempt * 5
             print(f"  {model[:40]}: {type(e).__name__} {str(e)[:120]}; retry in {wait}s")
             time.sleep(wait)
@@ -74,11 +77,11 @@ def main():
     ap.add_argument("--location", default="us-central1")
     ap.add_argument("--test", type=Path, required=True)
     ap.add_argument("--data", type=Path, help="processed data root, to attach the crop images")
-    ap.add_argument("--base", default="gemini-2.5-flash")
+    ap.add_argument("--base", default="gemini-3.5-flash")
     ap.add_argument("--tuned", required=True, help="tuned endpoint from runs/gemini/tuning_job.json")
     ap.add_argument("--base-json-mode", action=argparse.BooleanOptionalAction, default=True,
                     help="give the base model JSON mode (a stronger, fairer baseline)")
-    ap.add_argument("--thinking-budget", type=int, default=0, help="0 = no thinking (lower latency); -1 = omit setting")
+    ap.add_argument("--thinking-level", default="minimal", help="minimal|low|medium|high; empty string = omit")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--out", type=Path, default=Path("runs/gemini/eval"))
     args = ap.parse_args()
@@ -86,7 +89,7 @@ def main():
     from google import genai
     from google.genai import types
     client = genai.Client(vertexai=True, project=args.project, location=args.location)
-    tb = None if args.thinking_budget < 0 else args.thinking_budget
+    tb = args.thinking_level or None
     tests = [json.loads(l) for l in args.test.read_text().splitlines() if l.strip()][: args.limit]
     args.out.mkdir(parents=True, exist_ok=True)
     models = {"base": (args.base, args.base_json_mode), "tuned": (args.tuned, False)}
