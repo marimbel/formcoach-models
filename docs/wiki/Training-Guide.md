@@ -23,14 +23,21 @@ the parts in order. Each step says what to click or run, how long it takes, and 
 ## 1. What you are building
 
 ```
- phone (Flutter app)                                         Google Cloud
- ┌──────────────────────────────────────────────────┐        ┌───────────────────────────────────────┐
- │ camera → C: ML Kit Pose (33 landmarks, every frame)│        │ Cloud Run backend (FastAPI)            │
- │        → rep counter + joint angles                │  per   │   → B: fine-tuned Gemini 3.5 Flash     │
- │        → 3 body crops at the bottom of each rep    │  rep   │        (Vertex AI endpoint)            │
- │        → A: MobileNetV3 form classifier (TFLite) ──┼──────▶ │   → D: Gemini 3.1 Flash Image          │
- │ ◀── spoken cue, alert card, Visual Trainer image ──┼─────── │        (when you tap "See correct form")│
- └──────────────────────────────────────────────────┘        └───────────────────────────────────────┘
+┌─ Phone: Flutter app ────────────────────────────────────────┐
+│ camera                                                      │
+│   -> C: ML Kit Pose, 33 landmarks on every frame            │
+│   -> rep counter + joint angles                             │
+│   -> 3 body crops at the bottom of each rep                 │
+│   -> A: MobileNetV3 form classifier (TFLite)                │
+│ <- spoken cue, alert card, Visual Trainer image             │
+└─────────────────────────────────────────────────────────────┘
+                               |  once per rep: evidence + crop
+                               v  (the reply comes back up)
+┌─ Google Cloud ──────────────────────────────────────────────┐
+│ Cloud Run backend (FastAPI)                                 │
+│   -> B: fine-tuned Gemini 3.5 Flash (Vertex AI endpoint)    │
+│   -> D: Gemini 3.1 Flash Image (on "See correct form")      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 | Model | What it is | Trained by you? | Where you train it | Output file / resource |
