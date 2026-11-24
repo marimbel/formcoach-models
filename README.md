@@ -14,9 +14,13 @@ and evaluation. The mobile app and the Cloud Run backend are in **formcoach-app*
 
 | Source | What | License | Used for |
 |---|---|---|---|
-| **Our recordings** (`p01`, `p02`, …) | squat, lunge, chest press; all 13 classes; 2 views | ours (consent notes) | train, val, **test (only source)** |
+| **Our recordings** (`p01`, `p02`, …) | squat, lunge, push-up; all 13 classes; 2 views | ours (consent notes) | train, val, **test (only source)** |
 | Zenodo 17558630 squat images (`zsq`) | side-view squats: Good / Bad Back / Bad Heel | CC BY 4.0 | train, val |
-| Mendeley kgbb3yn47p v2 videos (`mdl`) | bodyweight squats, good/bad form, 3 views, 26 subjects; bad clips hand-labelled by us | CC BY 4.0 | train, val |
+| Mendeley kgbb3yn47p v2 videos (`mdl`) | bodyweight squats and push-ups, good/bad form, 3 views, 26 subjects; bad clips hand-labelled by us | CC BY 4.0 | train, val |
+| REHAB24-6, Zenodo 13305826 (`reh`) | lunges, push-ups (and squats): every rep marked correct/incorrect, 2 cameras, 10 adults; incorrect reps hand-labelled by us | CC BY-NC 4.0 (non-commercial) | train, val |
+
+Exercises: **squat, lunge, push-up**. Push-up replaced the proposal's chest press because chest press has no
+public form data, while push-ups have two public video sets and need no equipment to record.
 
 `02_make_splits.py` keeps every public-data participant out of the test set. `10_data_report.py` writes the
 counts per split / class / source for the report. Step-by-step: `notebooks/colab_model_a.ipynb` (GPU) and

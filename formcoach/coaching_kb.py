@@ -33,15 +33,15 @@ CUES = {
     ("lunge", "insufficient_depth"): ["Lower your back knee closer to the floor.",
                                       "Drop a bit deeper on the next rep.",
                                       "Bend both knees to about ninety degrees."],
-    ("chest_press", "elbow_flare"): ["Tuck your elbows to about 45 degrees.",
-                                     "Bring elbows in closer to your sides.",
-                                     "Don't flare; elbows angled toward your hips."],
-    ("chest_press", "uneven_arms"): ["Press both arms at the same speed.",
-                                     "Keep the weights level as you press.",
-                                     "Match your left and right arms."],
-    ("chest_press", "partial_rom"): ["Lower the weights all the way down.",
-                                     "Use your full range of motion.",
-                                     "Bring elbows down until upper arms touch."],
+    ("push_up", "hip_sag"): ["Squeeze your glutes so your hips don't drop.",
+                             "Brace your core; keep hips in line.",
+                             "Keep a straight line from head to heels."],
+    ("push_up", "elbow_flare"): ["Tuck your elbows to about 45 degrees.",
+                                 "Bring your elbows closer to your body.",
+                                 "Elbows angled back, not straight out."],
+    ("push_up", "partial_rom"): ["Lower your chest closer to the floor.",
+                                 "Go all the way down this rep.",
+                                 "Bend your elbows to ninety degrees or less."],
 }
 
 PRAISE = ["Nice rep, keep that form.", "Good rep.", "Solid, keep it up."]
@@ -49,7 +49,7 @@ IMPROVED = ["Better! That fixed it.", "Much better, keep that.", "That's the fix
 REPOSITION = {
     "squat": "Step back so your whole body is in frame.",
     "lunge": "Step back so your legs and feet are visible.",
-    "chest_press": "Move the phone so both arms are visible.",
+    "push_up": "Move the phone so your whole body is in frame.",
 }
 
 EVIDENCE_TEXT = {
@@ -59,7 +59,7 @@ EVIDENCE_TEXT = {
     "heel_lift": lambda f: _fmt("Heel rose {:.2f} shank-lengths above the toes", f.get("heel_lift")),
     "knee_alignment": lambda f: _fmt("Front knee travelled {:.2f} shank-lengths past the toes", f.get("knee_past_toe")),
     "elbow_flare": lambda f: _fmt("Elbows opened to about {:.0f} degrees from the torso", _max(f, "shoulder_abduction_left", "shoulder_abduction_right")),
-    "uneven_arms": lambda f: _fmt("Left and right elbow angles differed by {:.0f} degrees", f.get("elbow_asymmetry_deg")),
+    "hip_sag": lambda f: _fmt("Hips dropped {:.2f} body-lengths below the shoulder-to-ankle line", f.get("hip_sag")),
     "partial_rom": lambda f: _fmt("Elbows only bent to {:.0f} degrees", _min(f, "elbow_angle_left", "elbow_angle_right")),
 }
 
@@ -77,11 +77,12 @@ SUPPORTS = {
     "heel_lift": lambda f: _chk(f.get("heel_lift"), lambda v: v > 0.08),
     "knee_alignment": lambda f: _chk(f.get("knee_past_toe"), lambda v: v > 0.15),
     "elbow_flare": lambda f: _chk(_max(f, "shoulder_abduction_left", "shoulder_abduction_right"), lambda v: v > 70),
-    "uneven_arms": lambda f: _chk(f.get("elbow_asymmetry_deg"), lambda v: v > 15),
+    "hip_sag": lambda f: _chk(f.get("hip_sag"), lambda v: v > 0.05),
     "partial_rom": lambda f: _chk(_min(f, "elbow_angle_left", "elbow_angle_right"), lambda v: v > 100),
 }
 
-VIEW_BLIND = {("knee_valgus", "side"), ("uneven_arms", "side"), ("forward_lean", "front"), ("knee_alignment", "front")}
+VIEW_BLIND = {("knee_valgus", "side"), ("elbow_flare", "side"), ("forward_lean", "front"), ("knee_alignment", "front"),
+              ("hip_sag", "front")}
 
 
 def _ok(v):
@@ -104,7 +105,7 @@ def _max(f, *k):
 
 def visual_prompt(exercise: str, error: str) -> str:
     fix = CUES[(exercise, error)][0].rstrip(".").lower()
-    view = "front view" if error in ("knee_valgus", "uneven_arms") else "side view"
+    view = "front view" if error in ("knee_valgus", "elbow_flare") else "side view"
     name = exercise.replace("_", " ")
     return (f"Clean instructional illustration, {view}, of an adult athlete in plain workout clothes "
             f"at the bottom of a {name} with correct form: {fix}. Neutral background, arrows marking the fix.")

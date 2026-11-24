@@ -38,7 +38,7 @@ def participant_split(counts: dict[str, int], ratios=(0.70, 0.15, 0.15), seed: i
     return out
 
 
-def split_with_public(counts: dict[str, int], public_prefixes: tuple[str, ...] = ("mdl", "zsq", "faq", "pub"),
+def split_with_public(counts: dict[str, int], public_prefixes: tuple[str, ...] = ("mdl", "zsq", "faq", "pub", "reh"),
                       seed: int = 663, pinned: dict[str, str] | None = None) -> dict[str, str]:
     """Own recordings get train/val/test (70/15/15); participants from public datasets (id starts with one of
     `public_prefixes`) get only train/val (85/15). The test set is therefore always the group's own, unseen

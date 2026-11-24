@@ -3,7 +3,7 @@
 Video filename convention (one exercise, one form condition per clip):
 
     <participant>_<exercise>_<error>_<take>.mp4
-    e.g.  p03_squat_knee_valgus_t2.mp4,  p01_chest_press_correct_t1.mov
+    e.g.  p03_squat_knee_valgus_t2.mp4,  p01_push_up_correct_t1.mov
 
 Participants act out the error on purpose, so the label is known per video
 and every rep in the clip inherits it. Reviewers should still spot-check reps

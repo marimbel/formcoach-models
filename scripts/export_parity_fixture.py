@@ -36,7 +36,7 @@ def main(out: Path):
         lm[:, 2] = rng.uniform(0.3, 1.0, 33)
         lm[[11, 12, 23, 24, 25, 26, 27, 28], 2] = np.maximum(lm[[11, 12, 23, 24, 25, 26, 27, 28], 2], 0.55 if k % 4 else 0.0)
         lm = lm.round(3)  # the fixture stores rounded values, so compute expectations from them too
-        ex = ["squat", "lunge", "chest_press"][k % 3]
+        ex = ["squat", "lunge", "push_up"][k % 3]
         poses.append({
             "landmarks": lm.tolist(), "exercise": ex,
             "features": {k2: clean(v) for k2, v in G.frame_features(lm, ex).items()},

@@ -2,7 +2,7 @@
 """Bring public datasets into the pipeline's format. Public data is only ever used for TRAINING and
 VALIDATION; the test set is always the group's own recordings of unseen people (see 02_make_splits.py).
 
-Three sub-commands:
+Four sub-commands:
 
   inspect   Print a folder tree with file counts and example names (run this first on any download).
 
@@ -18,6 +18,19 @@ Three sub-commands:
           --keyword squat --good good --bad bad --prefix mdl --out data/raw --review data/review/mendeley
       # ... fill data/review/mendeley/review.csv (column `error`), then:
       python scripts/00_import_public_data.py apply-review data/review/mendeley/review.csv --out data/raw
+
+      # Mendeley push-ups work the same way, in their own review folder:
+      python scripts/00_import_public_data.py videos data/public/mendeley --exercise push_up \\
+          --keyword push --good good --bad bad --prefix mdl --out data/raw --review data/review/mendeley_push_up
+
+  rehab     REHAB24-6 (Zenodo 13305826, CC BY-NC 4.0): videos from 2 cameras + Segmentation.csv, which marks every
+            repetition's frames and whether it was done correctly (exercise 3 = push-ups, 5 = lunges, 6 = squats).
+            Runs of correct reps are cut into clips in data/raw/; runs of incorrect reps go to a review sheet, since
+            the dataset doesn't say which error it was. Participants become reh01..reh10 (train/val only).
+
+      python scripts/00_import_public_data.py rehab data/public/rehab24 --segmentation data/public/rehab24/Segmentation.csv \\
+          --map 5=lunge --map 3=push_up --prefix reh --out data/raw --review data/review/rehab
+      # ... fill data/review/rehab/<exercise>/review.csv, then apply-review on each
 
   images    Image datasets with one folder per class (e.g. Zenodo 17558630 squat images: Good / Bad Back /
             Bad Heel, CC BY 4.0). Writes a manifest for 01b_extract_images.py.
@@ -189,6 +202,123 @@ def cmd_apply_review(a):
     print(f"copied {done} labelled clips to {a.out}; skipped {skipped}; {missing} rows still unlabelled")
 
 
+# ---------------------------------------------------------------- rehab (REHAB24-6)
+VID_ID_RE = re.compile(r"PM[_\-\s]?(\d{3})", re.I)
+CAM_RE = re.compile(r"cam(?:era)?[_\-\s]?(\d{2})", re.I)
+SEG_FPS = 30  # Segmentation.csv frame numbers are at 30 fps
+
+
+def cut_clip(src: Path, dst: Path, first: int, last: int, pad: int = 10) -> int:
+    """Copy frames first..last (given at 30 fps) of src into dst. Returns frames written."""
+    import cv2
+    cap = cv2.VideoCapture(str(src))
+    fps = cap.get(cv2.CAP_PROP_FPS) or SEG_FPS
+    s = fps / SEG_FPS
+    a, b = max(0, int(round((first - pad) * s))), int(round((last + pad) * s))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, a)
+    out, n = None, 0
+    for _ in range(a, b + 1):
+        ok, fr = cap.read()
+        if not ok:
+            break
+        if out is None:
+            h, w = fr.shape[:2]
+            out = cv2.VideoWriter(str(dst), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+        out.write(fr)
+        n += 1
+    cap.release()
+    if out is not None:
+        out.release()
+    return n
+
+
+def runs_of(rows: list[dict]) -> list[list[dict]]:
+    """Group a video's repetitions (sorted by frame) into runs of consecutive reps with the same correctness."""
+    out: list[list[dict]] = []
+    for r in rows:
+        if out and out[-1][-1]["correctness"] == r["correctness"] and \
+                int(r["repetition_number"]) == int(out[-1][-1]["repetition_number"]) + 1:
+            out[-1].append(r)
+        else:
+            out.append([r])
+    return out
+
+
+def cmd_rehab(a):
+    want = {}
+    for m in a.map:
+        eid, _, ex = m.partition("=")
+        if ex not in exercises():
+            sys.exit(f"--map {m!r}: exercise must be one of {exercises()}")
+        want[eid.strip()] = ex
+    seg = [r for r in csv.DictReader(open(a.segmentation, newline=""), delimiter=";") if r["exercise_id"] in want]
+    if not seg:
+        sys.exit(f"no rows in {a.segmentation} for exercise ids {sorted(want)}")
+    cams = {c.strip() for c in a.cameras.split(",")}
+    files: dict[str, list[tuple[str, Path]]] = defaultdict(list)
+    for p in sorted(a.root.rglob("*")):
+        if p.suffix.lower() not in VIDEO_EXT:
+            continue
+        rel = str(p.relative_to(a.root))
+        m = VID_ID_RE.search(rel)
+        if not m:
+            continue
+        c = CAM_RE.search(rel)
+        cam = c.group(1) if c else "x"
+        if cam in cams or cam == "x":
+            files[f"PM_{m.group(1)}"].append((cam, p))
+    a.out.mkdir(parents=True, exist_ok=True)
+    by_video: dict[str, list[dict]] = defaultdict(list)
+    for r in seg:
+        by_video[r["video_id"]].append(r)
+    review_rows: dict[str, list[dict]] = defaultdict(list)
+    for ex in set(want.values()):
+        rv = a.review / ex / "review.csv"
+        if rv.exists() and any((r.get("error") or "").strip() for r in csv.DictReader(open(rv))) and not a.force:
+            sys.exit(f"{rv} already has labels; refusing to overwrite them. Use --force, or a different --review folder.")
+        (a.review / ex).mkdir(parents=True, exist_ok=True)
+    take, missing, n_good = Counter(), [], Counter()
+    for vid, rows in sorted(by_video.items()):
+        if not files.get(vid):
+            missing.append(vid)
+            continue
+        rows.sort(key=lambda r: int(r["first_frame"]))
+        ex = want[rows[0]["exercise_id"]]
+        participant = f"{a.prefix}{int(rows[0]['person_id']):02d}"
+        for run in runs_of(rows):
+            good = run[0]["correctness"].strip() == "1"
+            first, last = int(run[0]["first_frame"]), int(run[-1]["last_frame"])
+            for cam, path in files[vid]:
+                key = (participant, ex, "good" if good else "bad")
+                take[key] += 1
+                t = f"t{take[key]}"
+                view = f"cam{cam}"
+                if good:
+                    dst = a.out / f"{participant}_{ex}_correct_{t}.mp4"
+                    if not dst.exists() and cut_clip(path, dst, first, last) == 0:
+                        print(f"WARNING: could not read frames {first}-{last} of {path}")
+                    n_good[ex] += 1
+                else:
+                    clip = a.review / ex / f"{participant}_{t}_{view}.mp4"
+                    if not clip.exists():
+                        cut_clip(path, clip, first, last)
+                    sheet = clip.with_suffix(".jpg")
+                    contact_sheet(clip, sheet)
+                    review_rows[ex].append({"source_path": str(clip), "participant": participant, "take": t,
+                                            "view": view, "sheet": str(sheet), "exercise": ex, "error": ""})
+    for ex in set(want.values()):
+        with open(a.review / ex / "review.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["source_path", "participant", "take", "view", "sheet", "exercise", "error"])
+            w.writeheader()
+            w.writerows(review_rows[ex])
+        errs = [e for e in errors_for(ex) if e != "correct"]
+        print(f"{ex}: {n_good[ex]} correct clips -> {a.out}; {len(review_rows[ex])} incorrect clips to label in "
+              f"{a.review / ex / 'review.csv'} with one of {errs} or 'skip'")
+    if missing:
+        print(f"WARNING: no video found for {len(missing)} video ids (e.g. {missing[:5]}). Run `inspect` on {a.root} and "
+              "check that file names contain the id (PM_021) and the camera (Camera17).")
+
+
 # ---------------------------------------------------------------- images
 def cmd_images(a):
     mapping = {}
@@ -245,13 +375,23 @@ def main():
     s = sub.add_parser("apply-review")
     s.add_argument("review_csv", type=Path)
     s.add_argument("--out", type=Path, default=Path("data/raw"))
+    s = sub.add_parser("rehab")
+    s.add_argument("root", type=Path, help="folder with the unzipped REHAB24-6 videos")
+    s.add_argument("--segmentation", type=Path, required=True, help="Segmentation.csv from the Zenodo record")
+    s.add_argument("--map", action="append", required=True, help='"exercise_id=exercise", e.g. 5=lunge, 3=push_up')
+    s.add_argument("--prefix", default="reh")
+    s.add_argument("--cameras", default="17,18", help="which cameras to use (17 and/or 18)")
+    s.add_argument("--out", type=Path, default=Path("data/raw"))
+    s.add_argument("--review", type=Path, required=True)
+    s.add_argument("--force", action="store_true")
     s = sub.add_parser("images")
     s.add_argument("root", type=Path)
     s.add_argument("--map", action="append", required=True, help='"folder name=exercise:error", repeatable')
     s.add_argument("--prefix", required=True)
     s.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
-    {"inspect": cmd_inspect, "videos": cmd_videos, "apply-review": cmd_apply_review, "images": cmd_images}[a.cmd](a)
+    {"inspect": cmd_inspect, "videos": cmd_videos, "apply-review": cmd_apply_review, "rehab": cmd_rehab,
+     "images": cmd_images}[a.cmd](a)
 
 
 if __name__ == "__main__":

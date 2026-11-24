@@ -6,8 +6,8 @@ may be uploaded to the group's private Google Cloud bucket and sent to Gemini, a
 publish identifiable footage in the report or video without explicit permission.
 
 ## Who
-Aim for **8–10 participants**: the 3 group members plus friends and family. Public datasets add more squat
-examples for training, but **lunges and chest presses come only from us**, and so does the whole test set.
+Aim for **8–10 participants**: the 3 group members plus friends and family. Public datasets add squat, lunge and
+push-up examples for training (Zenodo, Mendeley, REHAB24-6), but the whole test set comes only from us.
 Recruit at least 2 non-members and pin them to the test split (`02_make_splits.py --pin p09=test`), so the
 "unseen user" test is real. Record variety: body types, heights, clothing (baggy vs. fitted), skin tones,
 hair covering the shoulders, etc.
@@ -23,7 +23,7 @@ For each exercise, one clip per class, **5–8 reps per clip**, plus a second ta
 |---|---|---|
 | Squat | correct, knee_valgus, forward_lean, insufficient_depth, heel_lift | take 1 front-45°, take 2 side |
 | Lunge | correct, knee_alignment (front knee far past toes), forward_lean, insufficient_depth | take 1 side, take 2 front-45° |
-| Chest press (dumbbell floor/bench) | correct, elbow_flare, uneven_arms, partial_rom | take 1 side, take 2 from the feet end |
+| Push-up | correct, hip_sag (hips drop toward the floor), elbow_flare (elbows straight out to the sides), partial_rom (chest stays high) | phone on the floor; take 1 side, take 2 front-45° (elbow flare only shows from the front) |
 
 Acted errors should be **realistic but clear**. Exaggerated cartoon errors make Model A look great on test and
 fail in the real world. Have one person watch and confirm each error is visible before moving on.

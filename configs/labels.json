@@ -16,12 +16,12 @@
       "required_landmarks": [11, 12, 23, 24, 25, 26, 27, 28],
       "camera_hint": "Phone at hip height, 2-3 m away, side-on so your front leg is clearly visible."
     },
-    "chest_press": {
-      "display": "Chest Press (dumbbell/floor)",
-      "errors": ["correct", "elbow_flare", "uneven_arms", "partial_rom"],
-      "rep": {"angle": "elbow", "combine": "mean", "top": 150, "bottom_enter": 120, "min_rep_seconds": 0.5},
-      "required_landmarks": [11, 12, 13, 14, 15, 16],
-      "camera_hint": "Phone about 1.5 m away at bench height, upper body and both arms in frame."
+    "push_up": {
+      "display": "Push-up",
+      "errors": ["correct", "hip_sag", "elbow_flare", "partial_rom"],
+      "rep": {"angle": "elbow", "combine": "mean", "top": 150, "bottom_enter": 115, "min_rep_seconds": 0.5},
+      "required_landmarks": [11, 12, 13, 14, 15, 16, 23, 24, 27, 28],
+      "camera_hint": "Phone on the floor about 2 m away, turned about 45 degrees from your side, whole body from head to heels in frame."
     }
   },
   "thresholds": {

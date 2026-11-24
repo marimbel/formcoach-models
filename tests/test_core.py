@@ -31,7 +31,7 @@ def test_class_list_and_indices():
 
 @pytest.mark.parametrize("name,exp", [
     ("p03_squat_knee_valgus_t2.mp4", ("p03", "squat", "knee_valgus", "t2")),
-    ("P01_chest_press_uneven_arms_t1.MOV", ("p01", "chest_press", "uneven_arms", "t1")),
+    ("P01_push_up_hip_sag_t1.MOV", ("p01", "push_up", "hip_sag", "t1")),
     ("p10_lunge_correct_t12.mp4", ("p10", "lunge", "correct", "t12")),
 ])
 def test_parse_video_name(name, exp):
@@ -213,9 +213,10 @@ def test_public_data_never_in_test():
     counts = {f"p{i:02d}": 40 for i in range(8)}
     counts.update({f"mdl{i}": 30 for i in range(12)})
     counts.update({f"zsq{i:02d}": 25 for i in range(10)})
+    counts.update({f"reh{i:02d}": 20 for i in range(1, 11)})
     sp = split_with_public(counts, pinned={"p07": "test"})
     assert set(sp) == set(counts)
-    assert all(sp[p] in ("train", "val") for p in counts if p.startswith(("mdl", "zsq")))
+    assert all(sp[p] in ("train", "val") for p in counts if p.startswith(("mdl", "zsq", "reh")))
     assert {"train", "val", "test"} <= {sp[p] for p in counts if p.startswith("p")}
     assert sp["p07"] == "test"
     pub = [p for p in counts if not p.startswith("p")]
@@ -223,3 +224,27 @@ def test_public_data_never_in_test():
     assert 0.05 < val_share < 0.3
     with pytest.raises(ValueError):
         split_with_public(counts, pinned={"mdl1": "test"})
+
+
+def test_push_up_hip_sag_sign():
+    """Prone body facing right, floor = larger y: hips lower than the shoulder-ankle line -> positive sag."""
+    def pose(hip_dy):
+        lm = np.zeros((33, 3))
+        lm[:, 2] = 1
+        pts = {11: (400, 300), 12: (400, 302), 23: (250, 300 + hip_dy), 24: (250, 302 + hip_dy), 27: (100, 300),
+               28: (100, 302), 13: (420, 350), 14: (420, 352), 15: (410, 400), 16: (410, 402)}
+        for i, xy in pts.items():
+            lm[i, :2] = xy
+        return lm
+    straight, sag, pike = (G.frame_features(pose(d), "push_up") for d in (0, 40, -40))
+    assert straight["hip_sag"] == pytest.approx(0, abs=0.01) and straight["body_line_angle"] == pytest.approx(180, abs=1)
+    assert sag["hip_sag"] > 0.1 and pike["hip_sag"] < -0.1
+
+
+def test_rehab_runs_split_on_correctness_and_gaps():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("imp", Path(__file__).resolve().parent.parent / "scripts" / "00_import_public_data.py")
+    imp = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(imp)
+    rows = [{"repetition_number": str(n), "correctness": c} for n, c in [(1, "1"), (2, "1"), (3, "0"), (4, "0"), (6, "0")]]
+    assert [[int(r["repetition_number"]) for r in run] for run in imp.runs_of(rows)] == [[1, 2], [3, 4], [6]]
