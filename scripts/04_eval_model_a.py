@@ -163,6 +163,9 @@ def main():
                     help="val = PILOT only (public data, before own recordings); final numbers always use test")
     args = ap.parse_args()
     crops = pd.read_csv(args.data / "crops.csv")
+    if "split" not in crops:
+        raise SystemExit("crops.csv has no split column. Run 02_make_splits.py after 01_extract_reps.py and "
+                         "01b_extract_images.py (01 rewrites the file), then retrain.")
     results = [evaluate(r, crops, args.data, args.eval_split) for r in args.runs]
     lines = ["| run | rep acc | macro P | macro R | macro F1 | error-vs-correct F1 | crop acc |", "|---|---|---|---|---|---|---|"]
     for m in results:

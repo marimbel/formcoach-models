@@ -80,6 +80,9 @@ def main():
     rng = np.random.default_rng(args.seed)
     prng = random.Random(args.seed)
     reps = pd.read_csv(args.data / "reps.csv")
+    if "split" not in reps:
+        raise SystemExit("reps.csv has no split column. Run 02_make_splits.py after 01_extract_reps.py and "
+                         "01b_extract_images.py (01 rewrites the file), then retrain.")
     crops = pd.read_csv(args.data / "crops.csv")
     bottom_img = crops[crops.offset == 0].drop_duplicates("rep_id").set_index("rep_id").image_path.to_dict()
     preds = None
