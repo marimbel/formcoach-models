@@ -84,6 +84,12 @@ def main():
     rows = list(csv.DictReader(open(a.manifest)))
     crop_dir = a.out / "crops" / a.prefix
     crop_dir.mkdir(parents=True, exist_ok=True)
+    # pseudo-participants: within each class, contiguous blocks of images in file order (neighbouring images are
+    # usually frames of the same clip and must not end up in both train and val)
+    by_cls: dict[tuple[str, str], list[int]] = {}
+    for i, r in enumerate(rows):
+        by_cls.setdefault((r["exercise"], r["error"]), []).append(i)
+    group_of = {i: j * a.groups // len(idx) for idx in by_cls.values() for j, i in enumerate(idx)}
     reps, crops, kept, dropped = [], [], 0, 0
     for i, r in enumerate(rows):
         img = cv2.imread(r["image_path"])
@@ -100,7 +106,7 @@ def main():
         if lm is None or float(np.mean(lm[req, 2])) < a.min_visibility:
             dropped += 1  # no person / body cut off: the app would ask to reposition, so don't train on it
             continue
-        participant = f"{a.prefix}{i % a.groups:02d}"
+        participant = f"{a.prefix}{group_of[i]:02d}"
         rep_id = f"{a.prefix}_img{i:05d}"
         feats = G.frame_features(lm, r["exercise"])
         rep_cfg = cfg[r["exercise"]]["rep"]
