@@ -32,6 +32,9 @@ def main():
     ap.add_argument("--eval-split", choices=["test", "val"], default="test", help="val = pilot only")
     args = ap.parse_args()
     reps = pd.read_csv(args.data / "reps.csv")
+    if "split" not in reps:
+        raise SystemExit("reps.csv has no split column. Run 02_make_splits.py after 01_extract_reps.py and "
+                         "01b_extract_images.py (01 rewrites the file), then retrain.")
     out = {}
     for ex in exercises():
         sub = reps[reps.exercise == ex]

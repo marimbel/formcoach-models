@@ -69,6 +69,9 @@ def main():
     c2i = {c: i for i, c in enumerate(names)}
     df = pd.read_csv(args.data / "crops.csv")
     if "split" not in df:
+        raise SystemExit("crops.csv has no split column. Run 02_make_splits.py after 01_extract_reps.py and "
+                         "01b_extract_images.py (01 rewrites the file), then retrain.")
+    if "split" not in df:
         sys.exit("crops.csv has no split column; run 02_make_splits.py first")
     tr, va = df[df.split == "train"], df[df.split == "val"]
     print(f"train {len(tr)} crops / val {len(va)} crops / {len(names)} classes")
