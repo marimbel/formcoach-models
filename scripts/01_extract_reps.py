@@ -54,6 +54,9 @@ class MediaPipePose:
             return None
         return np.array([[p.x * w, p.y * h, p.visibility] for p in res.pose_landmarks[0]], dtype=np.float32)
 
+    def close(self):
+        self.landmarker.close()
+
 
 def ensure_model(path: Path) -> Path:
     if not path.exists():
@@ -117,7 +120,7 @@ def main():
     videos = sorted(p for p in args.videos.rglob("*") if p.suffix.lower() in VIDEO_EXT)
     if not videos:
         sys.exit(f"No videos under {args.videos}")
-    pose = None
+    model_path = None
 
     reps_f = open(args.out / "reps.csv", "w", newline="")
     crops_f = open(args.out / "crops.csv", "w", newline="")
@@ -145,12 +148,18 @@ def main():
         if args.reuse_landmarks and npz.exists():
             lms = np.load(npz)["landmarks"]
         else:
-            pose = pose or MediaPipePose(ensure_model(args.pose_model))
+            model_path = model_path or ensure_model(args.pose_model)
+            # A fresh detector per video: VIDEO mode needs timestamps that only increase (each video restarts
+            # at 0) and tracks the person from frame to frame, which must not carry over between videos.
+            pose = MediaPipePose(model_path)
             lms = np.full((len(frames), 33, 3), np.nan, dtype=np.float32)
-            for t, bgr in enumerate(frames):
-                out = pose(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), int(t * 1000 / fps))
-                if out is not None:
-                    lms[t] = out
+            try:
+                for t, bgr in enumerate(frames):
+                    out = pose(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), int(t * 1000 / fps))
+                    if out is not None:
+                        lms[t] = out
+            finally:
+                pose.close()
             np.savez_compressed(npz, landmarks=lms, fps=fps, width=w, height=h)
         sm = smooth_landmarks(lms, fps)
         rep_cfg = ex_cfg["rep"]

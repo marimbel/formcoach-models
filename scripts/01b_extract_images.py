@@ -119,6 +119,7 @@ def main():
         crops.append(dict(image_path=str(rel), rep_id=rep_id, video=name, participant=participant,
                           exercise=r["exercise"], error=r["error"], class_name=cls, offset=0, frame=0))
         kept += 1
+    pose.lm.close()  # close explicitly: avoids a harmless but noisy error when Python exits
     append_rows(a.out / "reps.csv", REP_FIELDS, reps)
     append_rows(a.out / "crops.csv", CROP_FIELDS, crops)
     print(f"kept {kept} images, dropped {dropped} (unreadable, no person, or body not fully visible)")
